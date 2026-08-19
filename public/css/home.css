@@ -1,0 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap');
+
+:root {
+    --background: #f4ac07;
+    --foreground: #16082f;
+    --button-background: #ffffff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: 'Space Grotesk', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.home {
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: 48px 24px;
+}
+
+.profile {
+    width: min(480px, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 56px;
+    text-align: center;
+}
+
+.identity {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 32px;
+}
+
+.logo {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    border: 2px solid currentColor;
+    box-shadow:
+        0 1px currentColor,
+        0 2px currentColor,
+        0 3px currentColor,
+        0 4px currentColor,
+        0 5px currentColor,
+        0 6px currentColor;
+}
+
+.intro {
+    display: grid;
+    gap: 12px;
+}
+
+.intro h1,
+.intro p {
+    margin: 0;
+}
+
+.intro h1 {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.links {
+    width: 100%;
+    display: grid;
+    gap: 16px;
+}
+
+.link-button {
+    display: flex;
+    min-height: 58px;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    border: 2px solid currentColor;
+    border-radius: 9999px;
+    background: var(--button-background);
+    color: inherit;
+    box-shadow:
+        0 1px currentColor,
+        0 2px currentColor,
+        0 3px currentColor,
+        0 4px currentColor,
+        0 5px currentColor,
+        0 6px currentColor;
+    text-decoration: none;
+}
+
+.link-button:focus-visible {
+    outline: 3px solid currentColor;
+    outline-offset: 6px;
+}
+
+@media (max-width: 520px) {
+    body {
+        font-size: 16px;
+    }
+
+    .home {
+        padding-inline: 24px;
+    }
+
+    .profile {
+        gap: 48px;
+    }
+
+    .identity {
+        gap: 28px;
+    }
+
+    .intro h1 {
+        font-size: 21px;
+    }
+}
