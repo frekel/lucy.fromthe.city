@@ -3,13 +3,15 @@
 use App\Http\Controllers\ContactController;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'lucy.home')->name('lucy.home');
 
 Route::get('/fotoalbum', function () {
-    $photostreamUrl = 'https://www.flickr.com/photos/158198686@N03/';
     $page = max((int) request()->integer('page', 1), 1);
+    $perPage = 20;
+    $hasFlickrApiKey = filled(config('services.flickr.key'));
 
     $recentPhotos = Cache::remember('lucy.flickr.photos', now()->addHour(), function () {
         $response = Http::timeout(10)->get('https://www.flickr.com/services/feeds/photos_public.gne', [
@@ -36,48 +38,56 @@ Route::get('/fotoalbum', function () {
             ->all();
     });
 
-    $archivePhotos = Cache::remember('lucy.flickr.archive.photos', now()->addHours(6), function () {
-        $response = Http::timeout(15)->get('http://host.docker.internal:9999/fotoalbum/');
+    $photos = $recentPhotos;
+    $totalPages = 1;
 
-        if (! $response->successful()) {
-            return [];
+    if ($hasFlickrApiKey) {
+        try {
+            $response = app('flickr')->request('flickr.people.getPublicPhotos', [
+                'user_id' => config('services.flickr.user_id', '158198686@N03'),
+                'per_page' => $perPage,
+                'page' => $page,
+                'extras' => 'url_m,url_z,url_q',
+            ]);
+
+            if ($response->getStatus() === 'ok') {
+                $payload = $response->photos;
+                $totalPages = max((int) ($payload['pages'] ?? 1), 1);
+                $page = min(max((int) ($payload['page'] ?? 1), 1), $totalPages);
+
+                $photos = collect($payload['photo'] ?? [])
+                    ->map(function (array $item) {
+                        $image = $item['url_z'] ?? $item['url_m'] ?? $item['url_q'] ?? null;
+
+                        return [
+                            'title' => trim((string) ($item['title'] ?? '')) ?: 'Foto uit het Lucy-Rhea album',
+                            'image' => $image,
+                            'link' => isset($item['id'])
+                                ? 'https://www.flickr.com/photos/lucyfromthecity/'.$item['id'].'/'
+                                : null,
+                        ];
+                    })
+                    ->filter(fn (array $photo) => filled($photo['image']) && filled($photo['link']))
+                    ->values()
+                    ->all();
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Flickr package request failed; falling back to public feed.', [
+                'exception' => $exception,
+            ]);
+            $page = 1;
+            $totalPages = 1;
+            $photos = $recentPhotos;
         }
-
-        preg_match_all(
-            '~<a href="(https://www\.flickr\.com/photos/158198686@N03/[^"]+)"[^>]*><img[^>]+src="(https://[^" ]+)"~',
-            $response->body(),
-            $matches,
-            PREG_SET_ORDER,
-        );
-
-        return collect($matches)
-            ->map(fn (array $match) => [
-                'title' => 'Foto uit het Lucy-Rhea album',
-                'link' => $match[1],
-                'image' => $match[2],
-            ])
-            ->unique('link')
-            ->values()
-            ->all();
-    });
-
-    $olderPhotos = collect($archivePhotos)
-        ->slice(count($recentPhotos))
-        ->values();
-
-    $olderPageSize = 20;
-    $totalPages = max(1, 1 + (int) ceil($olderPhotos->count() / $olderPageSize));
-    $page = min($page, $totalPages);
-
-    $photos = $page === 1
-        ? $recentPhotos
-        : $olderPhotos->forPage($page - 1, $olderPageSize)->values()->all();
+    } else {
+        $page = 1;
+    }
 
     return view('lucy.pages.fotoalbum', [
         'photos' => $photos,
-        'photostreamUrl' => $photostreamUrl,
         'page' => $page,
         'totalPages' => $totalPages,
+        'hasFlickrApiKey' => $hasFlickrApiKey,
     ]);
 })->name('lucy.pages.fotoalbum');
 Route::view('/gewicht-diagram', 'lucy.pages.gewicht-diagram')->name('lucy.pages.gewicht-diagram');
